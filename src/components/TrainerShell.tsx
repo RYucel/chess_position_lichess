@@ -482,8 +482,8 @@ export function TrainerShell() {
           </button>
         </div>
       ) : (
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_480px] xl:gap-5">
-          <div className="space-y-3 xl:sticky xl:top-[84px]">
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,560px)_minmax(0,480px)] xl:justify-center xl:gap-5">
+          <div className="mx-auto w-full max-w-[560px] space-y-3 xl:sticky xl:top-[84px]">
             <TrainerBoard
               position={position}
               orientation={orientation}
