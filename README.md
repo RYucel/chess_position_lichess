@@ -7,7 +7,7 @@ Türkçe arayüz, koyu ve odaklı bir “minimalist Lichess / neo-brutalist” g
 ## Neler var?
 
 - **Çift aday / tek hamle modu** — iki aday aynı pozisyondan seçilir; birincil tercih PV1, alternatif PV2 ile kıyaslanır.
-- **1000 doğal pozisyon** — 334 açılış, 333 orta oyun, 333 oyun sonu; ilk 38 küratörlü set korunur.
+- **2000 doğal pozisyon** — 667 açılış, 667 orta oyun, 666 oyun sonu; ilk 38 küratörlü set korunur.
 - **Lichess derin verisi** — `depth ≥ 22`, mate yok, `|cp| ≤ 300`, en az 3 PV ve `PV1–PV2 ≤ 150 cp`.
 - **Anlık geri bildirim** — doğruluk yüzdesi, ortalama CPL, sırasız/sıralı Top-2 eşleşmesi, hamle sınıfı.
 - **Top-3 motor varyantı** — tahtada adım adım oynatma; senin hamlen de ok ile gösterilir.
@@ -94,8 +94,8 @@ CPL      = max(0, en iyi sıra-perspektifi cp − seçilen hamlenin sıra-perspe
   "version": 1,
   "generatedAt": "2026-10-21T...",
   "source": "Lichess cloud evaluation + Lichess/chess-position-evaluations",
-  "positionCount": 1000,
-  "phaseCounts": { "opening": 334, "middlegame": 333, "endgame": 333 },
+  "positionCount": 2000,
+  "phaseCounts": { "opening": 667, "middlegame": 667, "endgame": 666 },
   "positions": [
     {
       "id": "cm-0001",
@@ -136,7 +136,7 @@ pip install duckdb chess
 python scripts/build_dataset.py --limit-per-phase 167 --out public/data/curated_positions.json
 ```
 
-Mevcut 1000'lik dosya, ilk 38 küratörlü pozisyonun üzerine 350.000 satırlık taramadan seçilen 962 pozisyon eklenerek oluşturuldu (334 açılış / 333 orta oyun / 333 oyun sonu).
+Mevcut 2000'lik dosya, ilk 38 küratörlü pozisyonun üzerine iki Lichess taramasından (350.000 ve 800.000 satır) seçilen 1962 pozisyon eklenerek oluşturuldu (667 açılış / 667 orta oyun / 666 oyun sonu).
 
 Faydalı seçenekler:
 

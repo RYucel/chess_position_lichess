@@ -12,7 +12,7 @@ const dataset = JSON.parse(readFileSync(datasetPath, 'utf8')) as PositionDataset
 describe('curated position dataset', () => {
   it('matches its declared counts', () => {
     expect(dataset.positions).toHaveLength(dataset.positionCount);
-    expect(dataset.positionCount).toBeGreaterThanOrEqual(1000);
+    expect(dataset.positionCount).toBeGreaterThanOrEqual(2000);
     const counted = dataset.positions.reduce<Record<string, number>>((acc, position) => {
       acc[position.phase] = (acc[position.phase] ?? 0) + 1;
       return acc;
@@ -68,7 +68,7 @@ describe('curated position dataset', () => {
         }
       }
     }
-  }, 30_000);
+  }, 60_000);
 
   it('uses unique ids and FENs', () => {
     expect(new Set(dataset.positions.map((position) => position.id)).size).toBe(
