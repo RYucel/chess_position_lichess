@@ -1,0 +1,23 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# local data / caches
+*.tsbuildinfo
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+scripts/data/
+.env
+.env.local
+.env*.local
