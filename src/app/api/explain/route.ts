@@ -249,7 +249,10 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: provider.model,
         temperature: 0.35,
-        max_tokens: 700,
+        max_tokens: 1500,
+        // MiniMax reasons by default and can spend the whole budget before
+        // emitting the visible answer. Low effort leaves room for the note.
+        ...(provider.source === 'openrouter' ? { reasoning: { effort: 'low' } } : {}),
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
@@ -262,6 +265,8 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.error('[coach] provider HTTP error', response.status, detail.slice(0, 600));
       throw new Error(`${provider.source} HTTP ${response.status}`);
     }
     const payload = (await response.json()) as {
@@ -275,7 +280,11 @@ export async function POST(request: Request) {
       source: provider.source,
       model: provider.model,
     });
-  } catch {
+  } catch (error) {
+    console.error('[coach] provider failed', {
+      source: provider.source,
+      message: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json({
       explanation: localNote,
       source: 'local',
