@@ -21,3 +21,6 @@ scripts/data/
 .env
 .env.local
 .env*.local
+
+# Vercel CLI link metadata
+.vercel/
