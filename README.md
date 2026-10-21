@@ -7,7 +7,7 @@ Türkçe arayüz, koyu ve odaklı bir “minimalist Lichess / neo-brutalist” g
 ## Neler var?
 
 - **Çift aday / tek hamle modu** — iki aday aynı pozisyondan seçilir; birincil tercih PV1, alternatif PV2 ile kıyaslanır.
-- **38 küratörlü doğal pozisyon** — 16 açılış, 13 orta oyun, 9 oyun sonu.
+- **500 doğal pozisyon** — 167 açılış, 167 orta oyun, 166 oyun sonu; ilk 38 küratörlü set korunur.
 - **Lichess derin verisi** — `depth ≥ 22`, mate yok, `|cp| ≤ 300`, en az 3 PV ve `PV1–PV2 ≤ 150 cp`.
 - **Anlık geri bildirim** — doğruluk yüzdesi, ortalama CPL, sırasız/sıralı Top-2 eşleşmesi, hamle sınıfı.
 - **Top-3 motor varyantı** — tahtada adım adım oynatma; senin hamlen de ok ile gösterilir.
@@ -93,9 +93,9 @@ CPL      = max(0, en iyi sıra-perspektifi cp − seçilen hamlenin sıra-perspe
 {
   "version": 1,
   "generatedAt": "2026-10-21T...",
-  "source": "Lichess/chess-position-evaluations via DuckDB",
-  "positionCount": 38,
-  "phaseCounts": { "opening": 16, "middlegame": 13, "endgame": 9 },
+  "source": "Lichess cloud evaluation + Lichess/chess-position-evaluations",
+  "positionCount": 500,
+  "phaseCounts": { "opening": 167, "middlegame": 167, "endgame": 166 },
   "positions": [
     {
       "id": "cm-0001",

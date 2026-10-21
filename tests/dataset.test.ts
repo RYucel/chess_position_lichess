@@ -12,7 +12,7 @@ const dataset = JSON.parse(readFileSync(datasetPath, 'utf8')) as PositionDataset
 describe('curated position dataset', () => {
   it('matches its declared counts', () => {
     expect(dataset.positions).toHaveLength(dataset.positionCount);
-    expect(dataset.positionCount).toBeGreaterThanOrEqual(10);
+    expect(dataset.positionCount).toBeGreaterThanOrEqual(500);
     const counted = dataset.positions.reduce<Record<string, number>>((acc, position) => {
       acc[position.phase] = (acc[position.phase] ?? 0) + 1;
       return acc;
@@ -68,7 +68,7 @@ describe('curated position dataset', () => {
         }
       }
     }
-  });
+  }, 30_000);
 
   it('uses unique ids and FENs', () => {
     expect(new Set(dataset.positions.map((position) => position.id)).size).toBe(
@@ -77,5 +77,10 @@ describe('curated position dataset', () => {
     expect(new Set(dataset.positions.map((position) => position.fen)).size).toBe(
       dataset.positions.length,
     );
+    // Same board state with different move counters is still a duplicate.
+    const states = dataset.positions.map((position) =>
+      position.fen.split(' ').slice(0, 4).join(' '),
+    );
+    expect(new Set(states).size).toBe(dataset.positions.length);
   });
 });
