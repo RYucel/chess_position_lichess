@@ -133,8 +133,10 @@ Script, 2 GB'lık parquet parçalarını tamamen indirmeden DuckDB `httpfs` ile 
 
 ```bash
 pip install duckdb chess
-python scripts/build_dataset.py --limit-per-phase 20 --out public/data/curated_positions.json
+python scripts/build_dataset.py --limit-per-phase 167 --out public/data/curated_positions.json
 ```
+
+Mevcut 500'lük dosya, ilk 38 küratörlü pozisyonun üzerine 350.000 satırlık taramadan seçilen 462 pozisyon eklenerek oluşturuldu (167 açılış / 167 orta oyun / 166 oyun sonu).
 
 Faydalı seçenekler:
 
