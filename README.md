@@ -7,7 +7,7 @@ Türkçe arayüz, koyu ve odaklı bir “minimalist Lichess / neo-brutalist” g
 ## Neler var?
 
 - **Çift aday / tek hamle modu** — iki aday aynı pozisyondan seçilir; birincil tercih PV1, alternatif PV2 ile kıyaslanır.
-- **3500 doğal pozisyon** — 1167 açılış, 1167 orta oyun, 1166 oyun sonu; ilk 38 küratörlü set korunur. Hedef 5000.
+- **3500 doğal pozisyon** — 1167 açılış, 1167 orta oyun, 1166 oyun sonu; bu ilk sette ilk 38 küratörlü pozisyon korunur. Hedef 5000.
 - **Aylık yenilenen set** — her ay farklı bir Lichess parquet shard'ından yeni 3500 pozisyon üretilir; böylece pozisyonlar ezberlenmez.
 - **Lichess derin verisi** — `depth ≥ 22`, mate yok, `|cp| ≤ 300`, en az 3 PV ve `PV1–PV2 ≤ 150 cp`.
 - **Anlık geri bildirim** — doğruluk yüzdesi, ortalama CPL, sırasız/sıralı Top-2 eşleşmesi, hamle sınıfı.
