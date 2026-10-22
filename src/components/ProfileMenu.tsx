@@ -265,7 +265,7 @@ function ProfileDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[70] flex flex-col bg-ink-950/[0.98] sm:flex-row sm:items-center sm:justify-center sm:bg-black/70 sm:backdrop-blur-sm sm:p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -275,9 +275,9 @@ function ProfileDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="profile-dialog-title"
-        className="panel max-h-[92vh] w-full max-w-md overflow-y-auto rounded-b-none border-white/[0.1] bg-ink-900/[0.98] sm:rounded-[1.4rem]"
+        className="panel relative mx-auto flex h-full min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden rounded-none border-white/[0.1] bg-ink-900/[0.98] sm:h-auto sm:max-h-[86dvh] sm:flex-none sm:rounded-[1.4rem]"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.07] px-5 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-4">
           <div>
             <div className="eyebrow">Profil</div>
             <h2
@@ -295,7 +295,7 @@ function ProfileDialog({
           </button>
         </div>
 
-        <div className="space-y-4 p-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           {profile ? (
             <div className="panel-inset p-4">
               <div className="flex items-center gap-3">
