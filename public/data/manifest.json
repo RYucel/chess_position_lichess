@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-22T05:22:27+00:00",
+  "generatedAt": "2026-10-22T05:54:39+00:00",
   "month": "2026-10",
-  "source": "Lichess cloud evaluation + Lichess/chess-position-evaluations",
-  "positionCount": 3500,
+  "source": "Lichess/chess-position-evaluations via DuckDB (shards 1 + 2)",
+  "positionCount": 5000,
   "phaseCounts": {
-    "opening": 1167,
-    "middlegame": 1167,
-    "endgame": 1166
+    "opening": 1667,
+    "middlegame": 1667,
+    "endgame": 1666
   },
   "files": {
     "opening": "opening.json",
@@ -16,9 +16,9 @@
   },
   "refresh": {
     "month": "2026-10",
-    "shardStart": 1,
-    "scanLimit": 800000,
-    "seed": 3500,
-    "total": 3500
+    "shardStart": 2,
+    "scanLimit": 1000000,
+    "seed": 5000,
+    "total": 5000
   }
 }

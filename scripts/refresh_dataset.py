@@ -31,7 +31,7 @@ from dataset_io import PHASES, write_split
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 DEFAULT_OUT_DIR = ROOT / "public" / "data"
-DEFAULT_TOTAL = 3500
+DEFAULT_TOTAL = 5000
 SHARD_COUNT = 20
 MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 

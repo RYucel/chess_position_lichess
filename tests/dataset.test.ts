@@ -32,7 +32,7 @@ const dataset: PositionDataset = {
 describe('curated position dataset', () => {
   it('matches its declared counts and split files', () => {
     expect(dataset.positions).toHaveLength(dataset.positionCount);
-    expect(dataset.positionCount).toBeGreaterThanOrEqual(3500);
+    expect(dataset.positionCount).toBeGreaterThanOrEqual(5000);
     expect(manifest.positionCount).toBe(dataset.positions.length);
 
     for (const file of phaseFiles) {
@@ -49,7 +49,9 @@ describe('curated position dataset', () => {
   });
 
   it('contains enough middlegame decisions for the trainer', () => {
-    expect(dataset.phaseCounts.middlegame ?? 0).toBeGreaterThanOrEqual(1000);
+    expect(dataset.phaseCounts.middlegame ?? 0).toBeGreaterThanOrEqual(1500);
+    expect(dataset.phaseCounts.opening ?? 0).toBeGreaterThanOrEqual(1500);
+    expect(dataset.phaseCounts.endgame ?? 0).toBeGreaterThanOrEqual(1500);
   });
 
   it('applies the documented dataset filters', () => {
@@ -96,7 +98,7 @@ describe('curated position dataset', () => {
         }
       }
     }
-  }, 90_000);
+  }, 180_000);
 
   it('uses unique ids and FENs', () => {
     expect(new Set(dataset.positions.map((position) => position.id)).size).toBe(

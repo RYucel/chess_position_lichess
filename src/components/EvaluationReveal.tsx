@@ -12,10 +12,12 @@ import {
   Sparkles,
   Target,
   TrendingDown,
+  Trophy,
 } from 'lucide-react';
 import { CLASSIFICATION_META, PHASE_LABELS } from '@/lib/accuracy';
 import { formatCp, lineToSan } from '@/lib/chess-utils';
 import { cn } from '@/lib/cn';
+import type { RoundScore } from '@/lib/scoring';
 import type { DualEvaluation, MoveEvaluation, PositionRecord, TrainerMode } from '@/lib/types';
 
 export interface CoachState {
@@ -31,6 +33,7 @@ interface EvaluationRevealProps {
   analysis: DualEvaluation;
   mode: TrainerMode;
   coach: CoachState | null;
+  roundScore: RoundScore | null;
   onAskCoach: () => void;
   onPreviewPv: (index: number) => void;
   onPreviewMove: (uci: string) => void;
@@ -202,6 +205,7 @@ export function EvaluationReveal({
   analysis,
   mode,
   coach,
+  roundScore,
   onAskCoach,
   onPreviewPv,
   onPreviewMove,
@@ -249,6 +253,12 @@ export function EvaluationReveal({
               <span className="chip border-white/[0.08] text-stone-500">
                 {PHASE_LABELS[position.phase]}
               </span>
+              {roundScore && (
+                <span className={cn('chip', roundScore.tier.tone)}>
+                  <Trophy className="h-3 w-3" />
+                  +{roundScore.points} puan
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -279,6 +289,51 @@ export function EvaluationReveal({
           </div>
         )}
       </div>
+
+      {roundScore && (
+        <div className="panel-inset overflow-hidden">
+          <div className="grid grid-cols-2 divide-x divide-y divide-white/[0.06] sm:grid-cols-4 sm:divide-y-0">
+            <div className="px-3 py-3">
+              <div className="eyebrow">Kazanılan puan</div>
+              <div className="mt-1 flex items-baseline gap-1">
+                <span className="font-display text-xl font-semibold text-emerald-300">
+                  +{roundScore.points}
+                </span>
+                <span className="font-mono text-[9px] text-stone-500">puan</span>
+              </div>
+            </div>
+            <div className="px-3 py-3">
+              <div className="eyebrow">Maksimum</div>
+              <div className="mt-1 font-display text-xl font-semibold text-stone-100">
+                {roundScore.maxPoints}
+                <span className="ml-1 font-mono text-[9px] font-normal text-stone-500">puan</span>
+              </div>
+            </div>
+            <div className="px-3 py-3">
+              <div className="eyebrow">Zorluk</div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className={cn('chip px-2 py-0.5 text-[9px]', roundScore.tier.tone)}>
+                  {roundScore.tier.label}
+                </span>
+                <span className="font-mono text-[10px] text-stone-400">
+                  ×{roundScore.difficulty.toFixed(2)}
+                </span>
+              </div>
+            </div>
+            <div className="px-3 py-3">
+              <div className="eyebrow">Pozisyon girdisi</div>
+              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 font-mono text-[9.5px] text-stone-500">
+                <span>PV1–PV2 {roundScore.gapCp} cp</span>
+                <span>{roundScore.legalMoves} yasal hamle</span>
+                <span>d{roundScore.depth}</span>
+              </div>
+            </div>
+          </div>
+          <p className="border-t border-white/[0.06] px-3 py-2 font-mono text-[8.5px] leading-4 text-stone-600">
+            60 × CP kaldıracı × dallanma × derinlik × evre ağırlığı ({roundScore.phaseWeight.toFixed(2)}) × (doğruluk/100)^1.35
+          </p>
+        </div>
+      )}
 
       <div>
         <div className="mb-2 flex items-center justify-between">

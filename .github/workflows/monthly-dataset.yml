@@ -12,7 +12,7 @@ on:
       total:
         description: 'Position count'
         required: false
-        default: '3500'
+        default: '5000'
         type: string
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
           else
             MONTH="$(date -u +%Y-%m)"
           fi
-          TOTAL="${INPUT_TOTAL:-3500}"
+          TOTAL="${INPUT_TOTAL:-5000}"
           echo "MONTH=$MONTH" >> "$GITHUB_ENV"
           echo "TOTAL=$TOTAL" >> "$GITHUB_ENV"
 

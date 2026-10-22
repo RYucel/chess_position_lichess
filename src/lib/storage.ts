@@ -22,6 +22,10 @@ export interface AttemptRecord {
   cpl: number;
   accuracy: number;
   classification: Classification;
+  score?: number;
+  maxScore?: number;
+  difficulty?: number;
+  legalMoves?: number;
   moves: AttemptMove[];
   bestMoveSan: string;
   evalCp: number;

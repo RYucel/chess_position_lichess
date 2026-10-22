@@ -13,6 +13,7 @@ import {
   RotateCw,
   Sigma,
   Target,
+  Trophy,
 } from 'lucide-react';
 import { TrainerBoard, type BoardCandidate } from './TrainerBoard';
 import { CandidateSelector, type Candidate } from './CandidateSelector';
@@ -28,6 +29,7 @@ import {
 } from '@/lib/chess-utils';
 import { buildLocalCoachNote, pvToCoachPv } from '@/lib/coach';
 import { loadPositions, pickRandomPosition } from '@/lib/positions';
+import { buildRoundScore, summarizeProgress, type RoundScore } from '@/lib/scoring';
 import { estimateAfterMove } from '@/lib/staticEval';
 import { getStockfish } from '@/lib/stockfishWorker';
 import {
@@ -71,7 +73,8 @@ export function TrainerShell() {
   const [engineStatus, setEngineStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [coach, setCoach] = useState<CoachState | null>(null);
-  const [attemptsCount, setAttemptsCount] = useState(0);
+  const [roundScore, setRoundScore] = useState<RoundScore | null>(null);
+  const [progress, setProgress] = useState(() => summarizeProgress([]));
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +114,7 @@ export function TrainerShell() {
   }, []);
 
   useEffect(() => {
-    const refresh = () => setAttemptsCount(loadAttempts().length);
+    const refresh = () => setProgress(summarizeProgress(loadAttempts()));
     refresh();
     window.addEventListener('candidate-master:attempts-changed', refresh);
     window.addEventListener('storage', refresh);
@@ -130,6 +133,7 @@ export function TrainerShell() {
     setAnalyzing(false);
     setPreview(null);
     setCoach(null);
+    setRoundScore(null);
     setNotice(null);
   };
 
@@ -142,6 +146,7 @@ export function TrainerShell() {
   const changePhase = (nextPhase: Phase | 'all') => {
     setPhase(nextPhase);
     saveSettings({ mode, phase: nextPhase });
+    setRoundScore(null);
     if (!dataset) return;
     const next = pickRandomPosition(dataset.positions, nextPhase, position?.id);
     if (next) applyPosition(next);
@@ -155,6 +160,7 @@ export function TrainerShell() {
     setAnalysis(null);
     setPreview(null);
     setCoach(null);
+    setRoundScore(null);
     setNotice(null);
   };
 
@@ -194,6 +200,7 @@ export function TrainerShell() {
     setAnalysis(null);
     setCoach(null);
     setPreview(null);
+    setRoundScore(null);
 
     if (mode === 'dual') {
       const other = slot === 0 ? 1 : 0;
@@ -209,6 +216,7 @@ export function TrainerShell() {
     setAnalysis(null);
     setCoach(null);
     setPreview(null);
+    setRoundScore(null);
     setNotice(null);
   };
 
@@ -218,6 +226,7 @@ export function TrainerShell() {
     setAnalysis(null);
     setCoach(null);
     setPreview(null);
+    setRoundScore(null);
     setNotice(null);
   };
 
@@ -234,6 +243,7 @@ export function TrainerShell() {
     setNotice(null);
     setPreview(null);
     setCoach(null);
+    setRoundScore(null);
 
     try {
       const evaluations: MoveEvaluation[] = [];
@@ -271,6 +281,8 @@ export function TrainerShell() {
 
       const result = buildDualEvaluation(evaluations);
       setAnalysis(result);
+      const scored = buildRoundScore(position, result.averageAccuracy);
+      setRoundScore(scored);
 
       const primary = result.primary;
       saveAttempt({
@@ -290,6 +302,10 @@ export function TrainerShell() {
         cpl: result.averageCpl,
         accuracy: result.averageAccuracy,
         classification: primary.classification,
+        score: scored.points,
+        maxScore: scored.maxPoints,
+        difficulty: scored.difficulty,
+        legalMoves: scored.legalMoves,
         moves: result.moves.map((move) => ({
           uci: move.uci,
           san: move.san,
@@ -406,6 +422,7 @@ export function TrainerShell() {
     setAnalysis(null);
     setCoach(null);
     setPreview(null);
+    setRoundScore(null);
     setNotice(null);
     setActiveSlot(0);
   };
@@ -453,7 +470,7 @@ export function TrainerShell() {
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-400">
             Tuzak avı yok. Doğal, dengeli pozisyonlarda en güçlü iki fikri bul; seçimin
-            centipawn kaybı ve Lichess doğruluk formülüyle ölçülsün.
+            centipawn kaybı, doğruluk ve zorluk ağırlıklı puanla ölçülsün.
           </p>
         </div>
 
@@ -473,8 +490,12 @@ export function TrainerShell() {
             MultiPV 3–4
           </span>
           <span className="chip border-white/[0.08]">
+            <Trophy className="h-3 w-3 text-amber-300" />
+            Seviye {progress.level.level} · {progress.points} puan
+          </span>
+          <span className="chip border-white/[0.08]">
             <Target className="h-3 w-3 text-orange-300" />
-            {attemptsCount} kayıtlı tur
+            {progress.attempts} kayıtlı tur
           </span>
         </div>
       </section>
@@ -615,6 +636,7 @@ export function TrainerShell() {
                     analysis={analysis}
                     mode={mode}
                     coach={coach}
+                    roundScore={roundScore}
                     onAskCoach={askCoach}
                     onPreviewPv={showPv}
                     onPreviewMove={showMove}

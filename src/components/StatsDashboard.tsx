@@ -16,10 +16,9 @@ import {
 } from 'lucide-react';
 import { CLASSIFICATION_META, PHASE_LABELS, mean, top2HitRate } from '@/lib/accuracy';
 import { cn } from '@/lib/cn';
+import { pointsForAttempt, summarizeProgress } from '@/lib/scoring';
 import { clearAttempts, loadAttempts, type AttemptRecord } from '@/lib/storage';
-import type { Classification, Phase } from '@/lib/types';
-
-const PHASES: Phase[] = ['opening', 'middlegame', 'endgame'];
+import type { Classification } from '@/lib/types';
 
 function formatDate(value: string): string {
   try {
@@ -176,6 +175,8 @@ export function StatsDashboard() {
     };
   }, []);
 
+  const progress = useMemo(() => summarizeProgress(attempts), [attempts]);
+
   const stats = useMemo(() => {
     const accuracy = mean(attempts.map((attempt) => attempt.accuracy));
     const cpl = mean(attempts.map((attempt) => attempt.cpl));
@@ -184,23 +185,13 @@ export function StatsDashboard() {
       (current, attempt) => (!current || attempt.accuracy > current.accuracy ? attempt : current),
       null,
     );
-    const byPhase = PHASES.map((phase) => {
-      const phaseAttempts = attempts.filter((attempt) => attempt.phase === phase);
-      return {
-        phase,
-        count: phaseAttempts.length,
-        accuracy: mean(phaseAttempts.map((attempt) => attempt.accuracy)),
-        cpl: mean(phaseAttempts.map((attempt) => attempt.cpl)),
-        hitRate: top2HitRate(phaseAttempts),
-      };
-    });
     const distribution = (Object.keys(CLASSIFICATION_META) as Classification[]).map(
       (classification) => ({
         classification,
         count: attempts.filter((attempt) => attempt.classification === classification).length,
       }),
     );
-    return { accuracy, cpl, hitRate, best, byPhase, distribution };
+    return { accuracy, cpl, hitRate, best, distribution };
   }, [attempts]);
 
   if (!hydrated) {
@@ -229,8 +220,8 @@ export function StatsDashboard() {
             Sayıların anlattığı hikâye.
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-stone-400">
-            Top-2 isabetin, ortalama centipawn kaybın ve oyun evrelerine göre doğruluğun.
-            Tüm veriler yalnızca bu tarayıcıda saklanır.
+            Top-2 isabetin, ortalama centipawn kaybın, evre bazlı puanların ve seviye
+            ilerlemen. Tüm veriler yalnızca bu tarayıcıda saklanır.
           </p>
         </div>
         <Link href="/" className="btn-secondary w-fit text-xs">
@@ -248,7 +239,7 @@ export function StatsDashboard() {
           </h2>
           <p className="mt-2 max-w-md text-xs leading-6 text-stone-500">
             İlk pozisyonunu aç, iki aday seç ve karşılaştır. Sonuç bu sayfada doğruluk,
-            CPL ve Top-2 isabeti olarak birikecek.
+            CPL, Top-2 isabeti ve zorluk ağırlıklı puan olarak birikecek.
           </p>
           <Link href="/" className="btn-primary mt-5 text-xs">
             İlk turu başlat
@@ -256,6 +247,73 @@ export function StatsDashboard() {
         </div>
       ) : (
         <div className="mt-7 space-y-4">
+          <section className="panel p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/[0.08] text-amber-300">
+                  <Trophy className="h-5 w-5" />
+                </span>
+                <div>
+                  <div className="eyebrow">Gelişim</div>
+                  <h2 className="mt-0.5 font-display text-xl font-semibold text-stone-50">
+                    Seviye {progress.level.level}
+                  </h2>
+                  <p className="mt-0.5 text-[10px] text-stone-500">
+                    {progress.points} puan · sonraki seviyeye {progress.level.toNext} puan
+                  </p>
+                </div>
+              </div>
+              <div className="w-full sm:w-64">
+                <div className="mb-1 flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.14em] text-stone-600">
+                  <span>Seviye {progress.level.level}</span>
+                  <span>{Math.round(progress.level.progress * 100)}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white/[0.05]">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
+                    style={{ width: `${progress.level.progress * 100}%` }}
+                  />
+                </div>
+                <div className="mt-1 text-right font-mono text-[9px] text-stone-600">
+                  {progress.level.start} → {progress.level.next}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {progress.byPhase.map((item) => (
+                <div
+                  key={item.phase}
+                  className="rounded-xl border border-white/[0.07] bg-black/15 px-3 py-2.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-stone-200">
+                      {PHASE_LABELS[item.phase]}
+                    </span>
+                    <span className="font-mono text-[9px] text-stone-500">
+                      Sv. {item.level.level}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="font-display text-lg font-semibold text-stone-50">
+                      {item.points}
+                    </span>
+                    <span className="font-mono text-[9px] text-stone-600">puan</span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"
+                      style={{ width: `${item.level.progress * 100}%` }}
+                    />
+                  </div>
+                  <div className="mt-1.5 font-mono text-[8.5px] text-stone-600">
+                    {item.attempts} tur · {item.accuracy.toFixed(1)}% doğruluk
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               label="Çözülen tur"
@@ -329,7 +387,7 @@ export function StatsDashboard() {
                       {stats.best.accuracy.toFixed(1)}% doğruluk
                     </span>
                     <span className="font-mono text-[9px] text-stone-500">
-                      {Math.round(stats.best.cpl)} cp
+                      {Math.round(stats.best.cpl)} cp · +{pointsForAttempt(stats.best)} puan
                     </span>
                   </div>
                 </div>
@@ -348,29 +406,39 @@ export function StatsDashboard() {
               <Gauge className="h-4 w-4 text-stone-600" />
             </div>
             <div className="grid divide-y divide-white/[0.06] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-              {stats.byPhase.map((item) => (
+              {progress.byPhase.map((item) => (
                 <div key={item.phase} className="px-4 py-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-stone-200">
                       {PHASE_LABELS[item.phase]}
                     </span>
-                    <span className="font-mono text-[9px] text-stone-600">{item.count} tur</span>
+                    <span className="font-mono text-[9px] text-stone-600">
+                      {item.attempts} tur · Sv. {item.level.level}
+                    </span>
                   </div>
-                  {item.count ? (
+                  {item.attempts ? (
                     <>
                       <div className="mt-3 flex items-baseline justify-between">
                         <span className="font-display text-xl font-semibold text-stone-50">
-                          {item.accuracy.toFixed(1)}
-                          <span className="text-xs text-stone-500">%</span>
+                          {item.points}
+                          <span className="ml-1 text-xs text-stone-500">puan</span>
                         </span>
                         <span className="font-mono text-[9px] text-stone-500">
                           {Math.round(item.cpl)} cp · Top-2 {item.hitRate.toFixed(0)}%
                         </span>
                       </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
+                      <div className="mt-2 flex items-center justify-between text-[10px]">
+                        <span className="text-stone-400">
+                          {item.accuracy.toFixed(1)}% doğruluk
+                        </span>
+                        <span className="font-mono text-[9px] text-stone-600">
+                          {Math.round(item.level.progress * 100)}% sonraki seviye
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"
-                          style={{ width: `${item.accuracy}%` }}
+                          style={{ width: `${item.level.progress * 100}%` }}
                         />
                       </div>
                     </>
@@ -403,6 +471,7 @@ export function StatsDashboard() {
                     <th className="px-4 py-2 font-normal">Hamleler</th>
                     <th className="px-4 py-2 text-right font-normal">Doğruluk</th>
                     <th className="px-4 py-2 text-right font-normal">CPL</th>
+                    <th className="px-4 py-2 text-right font-normal">Puan</th>
                     <th className="px-4 py-2 text-right font-normal">Top-2</th>
                   </tr>
                 </thead>
@@ -426,6 +495,9 @@ export function StatsDashboard() {
                       <td className="px-4 py-2.5 text-right font-mono text-[10px] text-stone-400">
                         {Math.round(attempt.cpl)}
                       </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-[10px] text-amber-300/90">
+                        +{pointsForAttempt(attempt)}
+                      </td>
                       <td className="px-4 py-2.5 text-right">
                         <span
                           className={cn(
@@ -447,8 +519,9 @@ export function StatsDashboard() {
 
           <div className="flex flex-col items-start justify-between gap-3 px-1 pt-1 sm:flex-row sm:items-center">
             <p className="max-w-lg text-[10px] leading-5 text-stone-600">
-              Metrikler seçtiğin adayların PV1’e göre kaybını ölçer. Veriler localStorage’da
-              tutulur; başka bir tarayıcıya taşınmaz.
+              Puan = 60 × CP kaldıracı × dallanma × derinlik × evre ağırlığı ×
+              (doğruluk/100)^1.35. Metrikler seçtiğin adayların PV1’e göre kaybını ölçer;
+              veriler localStorage’da tutulur ve başka bir tarayıcıya taşınmaz.
             </p>
             <button
               type="button"

@@ -7,14 +7,15 @@ Türkçe arayüz, koyu ve odaklı bir “minimalist Lichess / neo-brutalist” g
 ## Neler var?
 
 - **Çift aday / tek hamle modu** — iki aday aynı pozisyondan seçilir; birincil tercih PV1, alternatif PV2 ile kıyaslanır.
-- **3500 doğal pozisyon** — 1167 açılış, 1167 orta oyun, 1166 oyun sonu; bu ilk sette ilk 38 küratörlü pozisyon korunur. Hedef 5000.
-- **Aylık yenilenen set** — her ay farklı bir Lichess parquet shard'ından yeni 3500 pozisyon üretilir; böylece pozisyonlar ezberlenmez.
+- **5000 doğal pozisyon** — 1667 açılış, 1667 orta oyun, 1666 oyun sonu; ilk 38 küratörlü pozisyon ve mevcut 3500'lük set korunur.
+- **Aylık yenilenen set** — her ay farklı bir Lichess parquet shard'ından yeni 5000 pozisyon üretilir; böylece pozisyonlar ezberlenmez.
 - **Lichess derin verisi** — `depth ≥ 22`, mate yok, `|cp| ≤ 300`, en az 3 PV ve `PV1–PV2 ≤ 150 cp`.
 - **Anlık geri bildirim** — doğruluk yüzdesi, ortalama CPL, sırasız/sıralı Top-2 eşleşmesi, hamle sınıfı.
 - **Top-3 motor varyantı** — tahtada adım adım oynatma; senin hamlen de ok ile gösterilir.
 - **Stockfish 19 Lite** — veri setinde olmayan adaylar tarayıcıda WASM ile değerlendirilir.
 - **AI koç** — `OPENROUTER_API_KEY` varsa OpenRouter üzerinden MiniMax; yoksa aynı PV verisinden üretilen deterministik Türkçe yerel not.
-- **Yerel istatistikler** — turlar, doğruluk trendi, evre bazlı başarı; veriler yalnızca `localStorage`'da.
+- **Zorluk ağırlıklı puanlama** — PV1–PV2 farkı, yasal hamle sayısı, kaynak derinliği ve evre ağırlığıyla hesaplanan matematiksel puan; doğruluk eğrisiyle çarpılır.
+- **Yerel ilerleme** — toplam puan, seviye, evre bazlı puan/seviye ve doğruluk trendi; veriler yalnızca `localStorage`'da.
 
 ## Kurulum
 
@@ -86,6 +87,26 @@ CPL      = max(0, en iyi sıra-perspektifi cp − seçilen hamlenin sıra-perspe
 
 `ΔWin%`, en iyi hamle ile seçilen hamle arasındaki Win% farkıdır. Formül sıfır kayıpta `99.9999` verir; arayüz bunu `100%` olarak yuvarlar.
 
+### Puanlama ve ilerleme
+
+Her tur sabit bir puan vermez. Pozisyonun potansiyeli ve kullanıcının doğruluğu ayrı ayrı hesaplanır:
+
+```text
+CP kaldıracı   = 1 + ln(1 + min(gapCp, 150) / 10) / ln(16)   # 1.00 → 2.00
+Dallanma       = 1 + 0.5 × clamp((legalMoves − 16) / 24, 0, 1) # 1.00 → 1.50
+Derinlik       = 1 + 0.2 × clamp((depth − 20) / 20, 0, 1)      # 1.00 → 1.20
+Evre ağırlığı  = açılış 1.00 · orta oyun 1.15 · oyun sonu 1.25
+Maks. puan     = 60 × CP kaldıracı × dallanma × derinlik × evre ağırlığı
+Kazanılan puan = maks. puan × (doğruluk / 100)^1.35
+```
+
+- `gapCp`, PV1 ile PV2 arasındaki farktır: çok centipawn kazandıran keskin bir hamle daha yüksek potansiyel taşır.
+- Yasal hamle sayısı ve kaynak derinliği, pozisyonun bilişsel yükünü ve veri güvenini ölçer.
+- Doğruluk üssü `1.35`, hatayı doğrusal olmayan biçimde cezalandırır; %90 doğruluk maksimumun yaklaşık %87'sini korur.
+- Seviye eşiği karekök tabanlıdır: `seviye = floor(sqrt(puan / 250)) + 1`. 0–249 puan seviye 1, 250–999 seviye 2, 1000–2249 seviye 3'tür.
+- Puanlar evre bazında ayrı toplanır; istatistik sayfası toplam puanı, seviyeyi ve açılış/orta oyun/oyun sonu ilerlemesini gösterir.
+- Puanlama öncesi kaydedilmiş eski turlarda `score` alanı yoktur; bu turlar doğruluk ve evre ağırlığından türetilen taban puanla geriye dönük tahmin edilir.
+
 ## Veri seti
 
 Çalışma zamanındaki veri tek bir dosya değil, evre bazlı üç dosya ve bir manifesttir:
@@ -105,9 +126,9 @@ public/data/
   "version": 1,
   "generatedAt": "2026-10-22T...",
   "month": "2026-10",
-  "source": "Lichess cloud evaluation + Lichess/chess-position-evaluations",
-  "positionCount": 3500,
-  "phaseCounts": { "opening": 1167, "middlegame": 1167, "endgame": 1166 },
+  "source": "Lichess/chess-position-evaluations via DuckDB (shards 1 + 2)",
+  "positionCount": 5000,
+  "phaseCounts": { "opening": 1667, "middlegame": 1667, "endgame": 1666 },
   "files": {
     "opening": "opening.json",
     "middlegame": "middlegame.json",
@@ -117,8 +138,8 @@ public/data/
     "month": "2026-10",
     "shardStart": 2,
     "scanLimit": 1000000,
-    "seed": 20264500,
-    "total": 3500
+    "seed": 5000,
+    "total": 5000
   }
 }
 ```
@@ -130,7 +151,7 @@ Her evre dosyası yalnızca kendi evresindeki pozisyonları içerir:
   "version": 1,
   "generatedAt": "2026-10-22T...",
   "phase": "middlegame",
-  "positionCount": 1167,
+  "positionCount": 1667,
   "positions": [
     {
       "id": "cm-0001",
@@ -172,11 +193,11 @@ pip install duckdb chess
 npm run dataset
 ```
 
-Bu komut, içinde bulunulan aya göre dönen bir Lichess shard'ından **3500** pozisyon üretir ve `public/data/` altındaki manifest + üç evre dosyasını yeniden yazar. Belirli bir ayı veya hedef sayıyı elle seçmek için:
+Bu komut, içinde bulunulan aya göre dönen bir Lichess shard'ından **5000** pozisyon üretir ve `public/data/` altındaki manifest + üç evre dosyasını yeniden yazar. Belirli bir ayı veya hedef sayıyı elle seçmek için:
 
 ```bash
-python scripts/refresh_dataset.py --month 2026-11 --total 3500
-python scripts/refresh_dataset.py --month 2026-11 --total 5000   # nihai hedef
+python scripts/refresh_dataset.py --month 2026-11 --total 5000
+python scripts/refresh_dataset.py --month 2026-11 --total 6000
 python scripts/refresh_dataset.py --dry-run --total 30 --scan-limit 200000
 ```
 
@@ -185,7 +206,7 @@ Aylık rotasyon:
 - 20 Lichess parquet shard'ı vardır. Script ay indeksine göre bir shard seçer; ilk setin kullandığı shard'lardan başlamamak için `+1` offset uygular.
 - `--seed` ay ve hedef sayıdan türetilir; aynı ay tekrar üretilirse aynı set çıkar, farklı ay yeni set üretir.
 - GitHub Actions `.github/workflows/monthly-dataset.yml` her ayın 1'inde çalışır, testleri geçerse yeni seti `main`e commit eder. Vercel bu commit'i otomatik yayınlar.
-- İlk 3500'lük set, mevcut 2500 pozisyonun üzerine shard-1 havuzundan 333 açılış / 334 orta oyun / 333 oyun sonu eklenerek oluşturuldu.
+- 5000'lik set, mevcut 3500 pozisyonun üzerine shard-2 havuzundan 500 açılış / 500 orta oyun / 500 oyun sonu eklenerek oluşturuldu; FEN ve kimlik çakışmaları elenir.
 
 Tek seferlik örnek veya hata ayıklama üretimi:
 
@@ -239,6 +260,7 @@ src/
     StatsDashboard.tsx       # localStorage istatistikleri
   lib/
     accuracy.ts              # Win%, Accuracy, CPL, sınıflandırma
+    scoring.ts               # zorluk ağırlıklı puan, seviye, ilerleme
     chess-utils.ts           # FEN, UCI→SAN, varyant kareleri
     positions.ts             # manifest + evre dosyalarını yükleme
     stockfishWorker.ts       # Stockfish 19 Lite UCI köprüsü
@@ -247,9 +269,9 @@ src/
 public/
   data/
     manifest.json            # ay, sayımlar, dosya adları
-    opening.json             # 1167 açılış
-    middlegame.json          # 1167 orta oyun
-    endgame.json             # 1166 oyun sonu
+    opening.json             # 1667 açılış
+    middlegame.json          # 1667 orta oyun
+    endgame.json             # 1666 oyun sonu
   engine/stockfish.js|.wasm
 scripts/
   build_dataset.py           # tek seferlik üretim / örnek
@@ -259,18 +281,19 @@ scripts/
 .github/workflows/
   monthly-dataset.yml        # aylık otomatik yenileme + test + commit
 tests/accuracy.test.ts
+tests/scoring.test.ts
 tests/dataset.test.ts
 ```
 
 ## Testler
 
 ```bash
-npm test          # vitest: formüller, sınıflandırma, veri seti bütünlüğü
+npm test          # vitest: formüller, puanlama, sınıflandırma, veri seti bütünlüğü
 npm run typecheck # tsc --noEmit
 npm run build     # üretim derlemesi
 ```
 
-Veri seti testi her FEN'i ve her PV'yi chess.js ile yeniden oynatır; ayrıca depth, mate, cp bandı ve PV sayısı filtrelerini doğrular.
+Veri seti testi her FEN'i ve her PV'yi chess.js ile yeniden oynatır; ayrıca depth, mate, cp bandı, PV sayısı ve 5000 pozisyon hedefini doğrular. Puanlama testi CP kaldıracı, dallanma, derinlik, doğruluk eğrisi ve seviye eşiklerinin monotonluğunu kontrol eder.
 
 ## Bilinen sınırlar
 
