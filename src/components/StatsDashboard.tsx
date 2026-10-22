@@ -17,6 +17,7 @@ import {
 import { CLASSIFICATION_META, PHASE_LABELS, mean, top2HitRate } from '@/lib/accuracy';
 import { cn } from '@/lib/cn';
 import { pointsForAttempt, summarizeProgress } from '@/lib/scoring';
+import { getProfile } from '@/lib/profile';
 import { clearAttempts, loadAttempts, type AttemptRecord } from '@/lib/storage';
 import type { Classification } from '@/lib/types';
 
@@ -521,19 +522,27 @@ export function StatsDashboard() {
             <p className="max-w-lg text-[10px] leading-5 text-stone-600">
               Puan = 60 × CP kaldıracı × dallanma × derinlik × evre ağırlığı ×
               (doğruluk/100)^1.35. Metrikler seçtiğin adayların PV1’e göre kaybını ölçer;
-              veriler localStorage’da tutulur ve başka bir tarayıcıya taşınmaz.
+              ilerleme bu cihazda saklanır, profil bağlıysa aynı kullanıcı adıyla diğer
+              cihazlara senkronlanır.
             </p>
             <button
               type="button"
               onClick={() => {
-                if (window.confirm('Tüm antrenman geçmişi silinsin mi?')) {
+                const scope = getProfile()
+                  ? 'Bu cihazdaki ve bağlı profil sunucusundaki tüm antrenman geçmişi'
+                  : 'Bu cihazdaki tüm antrenman geçmişi';
+                if (
+                  window.confirm(
+                    `${scope} silinsin mi? Bu işlem geri alınamaz; diğer cihazlar da sıfırlamayı alır.`,
+                  )
+                ) {
                   clearAttempts();
                   setAttempts([]);
                 }
               }}
               className="btn-ghost text-[10px] text-stone-600 hover:text-rose-300"
             >
-              <Trash2 className="h-3 w-3" /> Geçmişi temizle
+              <Trash2 className="h-3 w-3" /> İlerlemeyi sıfırla
             </button>
           </div>
         </div>

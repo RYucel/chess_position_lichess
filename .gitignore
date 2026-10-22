@@ -24,3 +24,4 @@ scripts/data/
 
 # Vercel CLI link metadata
 .vercel/
+.env*

@@ -36,6 +36,11 @@ export interface TrainerSettings {
   phase: Phase | 'all';
 }
 
+export interface ProgressChangeDetail {
+  source?: 'local' | 'remote';
+  reset?: boolean;
+}
+
 const ATTEMPTS_KEY = 'candidate-master:attempts:v1';
 const SETTINGS_KEY = 'candidate-master:settings:v1';
 const MAX_ATTEMPTS = 400;
@@ -68,16 +73,44 @@ export function saveAttempt(attempt: AttemptRecord): void {
   try {
     const attempts = [attempt, ...loadAttempts()].slice(0, MAX_ATTEMPTS);
     window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(attempts));
-    window.dispatchEvent(new CustomEvent('candidate-master:attempts-changed'));
+    window.dispatchEvent(
+      new CustomEvent<ProgressChangeDetail>('candidate-master:attempts-changed', {
+        detail: { source: 'local' },
+      }),
+    );
   } catch {
     // Storage may be full or disabled. Training should never break because of it.
+  }
+}
+
+/** Replace the local history with a merged remote snapshot without re-uploading it. */
+export function replaceAttempts(attempts: AttemptRecord[]): void {
+  if (!isBrowser()) return;
+  try {
+    const capped = attempts.slice(0, MAX_ATTEMPTS);
+    if (capped.length) {
+      window.localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(capped));
+    } else {
+      window.localStorage.removeItem(ATTEMPTS_KEY);
+    }
+    window.dispatchEvent(
+      new CustomEvent<ProgressChangeDetail>('candidate-master:attempts-changed', {
+        detail: { source: 'remote' },
+      }),
+    );
+  } catch {
+    // Ignore storage failures.
   }
 }
 
 export function clearAttempts(): void {
   if (!isBrowser()) return;
   window.localStorage.removeItem(ATTEMPTS_KEY);
-  window.dispatchEvent(new CustomEvent('candidate-master:attempts-changed'));
+  window.dispatchEvent(
+    new CustomEvent<ProgressChangeDetail>('candidate-master:attempts-changed', {
+      detail: { source: 'local', reset: true },
+    }),
+  );
 }
 
 export function loadSettings(): TrainerSettings {

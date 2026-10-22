@@ -15,7 +15,7 @@ Türkçe arayüz, koyu ve odaklı bir “minimalist Lichess / neo-brutalist” g
 - **Stockfish 19 Lite** — veri setinde olmayan adaylar tarayıcıda WASM ile değerlendirilir.
 - **AI koç** — `OPENROUTER_API_KEY` varsa OpenRouter üzerinden MiniMax; yoksa aynı PV verisinden üretilen deterministik Türkçe yerel not.
 - **Zorluk ağırlıklı puanlama** — PV1–PV2 farkı, yasal hamle sayısı, kaynak derinliği ve evre ağırlığıyla hesaplanan matematiksel puan; doğruluk eğrisiyle çarpılır.
-- **Yerel ilerleme** — toplam puan, seviye, evre bazlı puan/seviye ve doğruluk trendi; veriler yalnızca `localStorage`'da.
+- **Yerel ilerleme, isteğe bağlı bulut senkronu** — puan/seviye/evre ilerlemesi `localStorage`da tutulur; kullanıcı adı bağlanırsa aynı adla tablet ve telefonda ortak profile senkronlanır (Vercel Blob).
 
 ## Kurulum
 
@@ -63,10 +63,20 @@ DEEPSEEK_MODEL=deepseek-chat
 3. **Settings → Environment Variables** altında şunları ekle:
    - `OPENROUTER_API_KEY` (zorunlu, AI koç için)
    - `OPENROUTER_MODEL` = `minimax/minimax-m3.1-flash:free`
+   - `BLOB_READ_WRITE_TOKEN` (isteğe bağlı, ilerleme senkronu için; Vercel Blob store'a bağlanınca otomatik gelir)
    - İsteğe bağlı: `OPENROUTER_SITE_URL`
 4. Deploy et. API route, Stockfish WASM ve `public/data` aynı projede çalışır.
 
 Anahtarı `.env.local` dosyasına koyup commit etme; `.gitignore` bunu engeller. Vercel'de ortam değişkeni değiştirdikten sonra yeniden deploy gerekir.
+
+## PWA ve cihazlar arası ilerleme
+
+- Uygulama `public/manifest.webmanifest` + `public/sw.js` ile PWA'ya dönüşür; ana sayfa/istatistikler ve kullanılan pozisyon setleri çevrimdışı önbelleğe alınır. Android'de Chrome “Uygulamayı yükle”, iOS/iPadOS'te Safari → Paylaş → “Ana Ekrana Ekle”.
+- `scripts/make-icons.mjs` manifest ikonlarını (192/512/maskable/apple) üretir. Gerekmez, dosyalar repoda durur.
+- Profil menüsünden kullanıcı adı girildiğinde ilerleme `progress/v1/<sha256(kullanıcı adı)>.json` olarak Vercel Blob'a yazılır. Aynı adı başka cihazda girmek aynı geçmişi geri yükler; turlar `id` üzerinden birleşir (en fazla 500 tur).
+- `BLOB_READ_WRITE_TOKEN` yoksa senkron API 503 döner ve uygulama yerel `localStorage` ile çalışmaya devam eder.
+- Kullanıcı adı bir hesap değildir: aynı adı bilen herkes profili görebilir. Kişisel bilgi içermeyen bir takma ad kullanın.
+- İstatistik sayfasındaki sıfırlama hem yerel hem bağlı profildeki geçmişi temizler; `resetAt` işareti sayesinde bağlantı geri gelince eski cihazlar silinmiş tarihi geri yükleyemez.
 
 ## Nasıl çalışır?
 
