@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   Check,
@@ -470,14 +471,16 @@ export function ProfileMenu() {
           <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-ink-950" />
         )}
       </button>
-      {open && (
-        <ProfileDialog
-          profile={profile}
-          status={status}
-          attempts={attempts}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      {open &&
+        createPortal(
+          <ProfileDialog
+            profile={profile}
+            status={status}
+            attempts={attempts}
+            onClose={() => setOpen(false)}
+          />,
+          document.body,
+        )}
     </>
   );
 }
