@@ -36,9 +36,35 @@ export interface PositionRecord {
 export interface PositionDataset {
   version: number;
   generatedAt: string;
+  month?: string;
   source: string;
   positionCount: number;
   phaseCounts: Partial<Record<Phase, number>>;
+  positions: PositionRecord[];
+}
+
+export interface DatasetManifest {
+  version: number;
+  generatedAt: string;
+  month: string;
+  source: string;
+  positionCount: number;
+  phaseCounts: Partial<Record<Phase, number>>;
+  files: Record<Phase, string>;
+  refresh?: {
+    month: string;
+    shardStart: number;
+    scanLimit: number;
+    seed: number;
+    total: number;
+  };
+}
+
+export interface PhaseDataset {
+  version: number;
+  generatedAt: string;
+  phase: Phase;
+  positionCount: number;
   positions: PositionRecord[];
 }
 

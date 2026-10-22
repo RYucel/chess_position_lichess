@@ -7,7 +7,8 @@ Türkçe arayüz, koyu ve odaklı bir “minimalist Lichess / neo-brutalist” g
 ## Neler var?
 
 - **Çift aday / tek hamle modu** — iki aday aynı pozisyondan seçilir; birincil tercih PV1, alternatif PV2 ile kıyaslanır.
-- **2500 doğal pozisyon** — 834 açılış, 833 orta oyun, 833 oyun sonu; ilk 38 küratörlü set korunur.
+- **3500 doğal pozisyon** — 1167 açılış, 1167 orta oyun, 1166 oyun sonu; ilk 38 küratörlü set korunur. Hedef 5000.
+- **Aylık yenilenen set** — her ay farklı bir Lichess parquet shard'ından yeni 3500 pozisyon üretilir; böylece pozisyonlar ezberlenmez.
 - **Lichess derin verisi** — `depth ≥ 22`, mate yok, `|cp| ≤ 300`, en az 3 PV ve `PV1–PV2 ≤ 150 cp`.
 - **Anlık geri bildirim** — doğruluk yüzdesi, ortalama CPL, sırasız/sıralı Top-2 eşleşmesi, hamle sınıfı.
 - **Top-3 motor varyantı** — tahtada adım adım oynatma; senin hamlen de ok ile gösterilir.
@@ -87,15 +88,49 @@ CPL      = max(0, en iyi sıra-perspektifi cp − seçilen hamlenin sıra-perspe
 
 ## Veri seti
 
-Çalışma zamanındaki dosya: `public/data/curated_positions.json`.
+Çalışma zamanındaki veri tek bir dosya değil, evre bazlı üç dosya ve bir manifesttir:
+
+```text
+public/data/
+  manifest.json
+  opening.json
+  middlegame.json
+  endgame.json
+```
+
+`manifest.json` sayımları, setin ayını ve dosya adlarını taşır:
 
 ```json
 {
   "version": 1,
-  "generatedAt": "2026-10-21T...",
+  "generatedAt": "2026-10-22T...",
+  "month": "2026-10",
   "source": "Lichess cloud evaluation + Lichess/chess-position-evaluations",
-  "positionCount": 2500,
-  "phaseCounts": { "opening": 834, "middlegame": 833, "endgame": 833 },
+  "positionCount": 3500,
+  "phaseCounts": { "opening": 1167, "middlegame": 1167, "endgame": 1166 },
+  "files": {
+    "opening": "opening.json",
+    "middlegame": "middlegame.json",
+    "endgame": "endgame.json"
+  },
+  "refresh": {
+    "month": "2026-10",
+    "shardStart": 2,
+    "scanLimit": 1000000,
+    "seed": 20264500,
+    "total": 3500
+  }
+}
+```
+
+Her evre dosyası yalnızca kendi evresindeki pozisyonları içerir:
+
+```json
+{
+  "version": 1,
+  "generatedAt": "2026-10-22T...",
+  "phase": "middlegame",
+  "positionCount": 1167,
   "positions": [
     {
       "id": "cm-0001",
@@ -120,6 +155,7 @@ CPL      = max(0, en iyi sıra-perspektifi cp − seçilen hamlenin sıra-perspe
 - `cp` ve `evalCp` **beyaz perspektifindedir**. Uygulama sıra perspektifine kendisi çevirir.
 - `line` boşlukla ayrılmış UCI hamleleridir. Lichess'in `e1h1` / `e8h8` gibi rok notasyonları standart UCI'ye (`e1g1`, `e8g8`) çevrilir.
 - Aynı FEN'in birden fazla PV satırı tek pozisyonda birleştirilir; aynı ilk hamlenin en derin satırı tutulur.
+- `manifest.json` ile evre dosyalarının toplamı eşleşmezse uygulama veri setini yüklemeyi reddeder.
 
 ### Veri setini yeniden üretmek
 
@@ -129,34 +165,56 @@ Kaynak: [`Lichess/chess-position-evaluations`](https://huggingface.co/datasets/L
 fen: VARCHAR, line: VARCHAR, depth: UTINYINT, knodes: INTEGER, cp: SMALLINT, mate: TINYINT
 ```
 
-Script, 2 GB'lık parquet parçalarını tamamen indirmeden DuckDB `httpfs` ile okur:
+Script, 2 GB'lık parquet parçalarını tamamen indirmeden DuckDB `httpfs` ile okur. Aylık seti yenilemek için:
 
 ```bash
 pip install duckdb chess
-python scripts/build_dataset.py --limit-per-phase 167 --out public/data/curated_positions.json
+npm run dataset
 ```
 
-Mevcut 2500'lük dosya, ilk 38 küratörlü pozisyonun üzerine iki Lichess taramasından (350.000 ve 800.000 satır) seçilen 2462 pozisyon eklenerek oluşturuldu (834 açılış / 833 orta oyun / 833 oyun sonu).
-
-Faydalı seçenekler:
+Bu komut, içinde bulunulan aya göre dönen bir Lichess shard'ından **3500** pozisyon üretir ve `public/data/` altındaki manifest + üç evre dosyasını yeniden yazar. Belirli bir ayı veya hedef sayıyı elle seçmek için:
 
 ```bash
+python scripts/refresh_dataset.py --month 2026-11 --total 3500
+python scripts/refresh_dataset.py --month 2026-11 --total 5000   # nihai hedef
+python scripts/refresh_dataset.py --dry-run --total 30 --scan-limit 200000
+```
+
+Aylık rotasyon:
+
+- 20 Lichess parquet shard'ı vardır. Script ay indeksine göre bir shard seçer; ilk setin kullandığı shard'lardan başlamamak için `+1` offset uygular.
+- `--seed` ay ve hedef sayıdan türetilir; aynı ay tekrar üretilirse aynı set çıkar, farklı ay yeni set üretir.
+- GitHub Actions `.github/workflows/monthly-dataset.yml` her ayın 1'inde çalışır, testleri geçerse yeni seti `main`e commit eder. Vercel bu commit'i otomatik yayınlar.
+- İlk 3500'lük set, mevcut 2500 pozisyonun üzerine shard-1 havuzundan 333 açılış / 334 orta oyun / 333 oyun sonu eklenerek oluşturuldu.
+
+Tek seferlik örnek veya hata ayıklama üretimi:
+
+```bash
+# Küçük bir örnek seti doğrudan evre dosyalarına yaz
+python scripts/build_dataset.py --limit-per-phase 20 --split-dir /tmp/candidate-data
+
+# Tek dosyalık çıktı
+python scripts/build_dataset.py --limit-per-phase 20 --out /tmp/sample.json
+
 # Daha geniş tarama, daha fazla aday
-python scripts/build_dataset.py --scan-limit 750000 --shard-count 2
+python scripts/build_dataset.py --scan-limit 750000 --shard-count 2 --split-dir /tmp/candidate-data
 
 # İndirilmiş yerel parquet ile (ağ yoksa)
-python scripts/build_dataset.py --local scripts/data/data_0000.parquet
+python scripts/build_dataset.py --local scripts/data/data_0000.parquet --split-dir /tmp/candidate-data
+```
 
-# Filtreleri sıkılaştır
-python scripts/build_dataset.py --min-depth 24 --max-gap 100 --eval-band 250
+Eski tek dosyalık veri setini evrelere bölmek için:
+
+```bash
+python scripts/split_dataset.py --input public/data/curated_positions.json
 ```
 
 Notlar:
 
 - Lichess FEN'leri dört alanlıdır (`... w KQkq -`); script altı alanlı FEN üretir.
 - Evre sınıflandırması materyal ve vezir varlığına dayanır (`≤14 taş` veya vezirsiz `≤20 taş` → oyun sonu; `≥26 taş` ve iki vezir → açılış).
-- Varsayılan `--shard-count 1`, ilk parçadan `350.000` PV satırı okur. Daha çeşitli havuz için `--shard-count` veya `--scan-limit` artırılabilir.
 - Script kendi başına veri setini doğrular: her PV, FEN'den itibaren python-chess ile oynanır; yasadışı satırlar atılır.
+- `npm run dataset:verify` manifesti, evre dosyalarını, sayımları, filtreleri ve tüm PV'leri yeniden doğrular.
 
 Doğrulama:
 
@@ -182,13 +240,24 @@ src/
   lib/
     accuracy.ts              # Win%, Accuracy, CPL, sınıflandırma
     chess-utils.ts           # FEN, UCI→SAN, varyant kareleri
+    positions.ts             # manifest + evre dosyalarını yükleme
     stockfishWorker.ts       # Stockfish 19 Lite UCI köprüsü
     coach.ts                 # yerel Türkçe koç notu
     storage.ts               # localStorage
 public/
-  data/curated_positions.json
+  data/
+    manifest.json            # ay, sayımlar, dosya adları
+    opening.json             # 1167 açılış
+    middlegame.json          # 1167 orta oyun
+    endgame.json             # 1166 oyun sonu
   engine/stockfish.js|.wasm
-scripts/build_dataset.py
+scripts/
+  build_dataset.py           # tek seferlik üretim / örnek
+  refresh_dataset.py         # aylık dönen shard + yeni set
+  split_dataset.py           # monoliti evrelere bölme
+  dataset_io.py              # ortak yazma/doğrulama
+.github/workflows/
+  monthly-dataset.yml        # aylık otomatik yenileme + test + commit
 tests/accuracy.test.ts
 tests/dataset.test.ts
 ```
@@ -208,6 +277,7 @@ Veri seti testi her FEN'i ve her PV'yi chess.js ile yeniden oynatır; ayrıca de
 - İstatistikler tarayıcıya özeldir; cihazlar arasında eşitlenmez.
 - Stockfish WASM ilk açılışta birkaç saniye yüklenebilir. Yüklenemezse veri seti PV'leri yine çalışır; yalnızca veri seti dışı adaylar yaklaşık değerlendirilir.
 - AI sağlayıcı anahtarı yoksa koç notu şablonludur; sayı üretmez, yalnızca verilen PV'leri açıklar.
+- Aylık yenileme GitHub Actions'a bağlıdır; workflow devre dışı kalırsa `npm run dataset` ile elle çalıştırılabilir.
 - Veri seti Lichess değerlendirmelerine dayanır; motor sürümü ve derinlik kaynağa göre değişebilir.
 - Stockfish GPLv3 lisanslıdır; `public/engine/` altındaki dağıtım bu lisansı korur.
 

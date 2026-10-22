@@ -1,18 +1,46 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
-import type { PositionDataset } from '../src/lib/types';
+import type {
+  DatasetManifest,
+  Phase,
+  PhaseDataset,
+  PositionDataset,
+} from '../src/lib/types';
 
-const datasetPath = fileURLToPath(
-  new URL('../public/data/curated_positions.json', import.meta.url),
-);
-const dataset = JSON.parse(readFileSync(datasetPath, 'utf8')) as PositionDataset;
+const dataDir = fileURLToPath(new URL('../public/data', import.meta.url));
+const manifest = JSON.parse(
+  readFileSync(join(dataDir, 'manifest.json'), 'utf8'),
+) as DatasetManifest;
+const phases: Phase[] = ['opening', 'middlegame', 'endgame'];
+const phaseFiles = phases.map((phase) => {
+  const file = manifest.files[phase];
+  return JSON.parse(readFileSync(join(dataDir, file), 'utf8')) as PhaseDataset;
+});
+const dataset: PositionDataset = {
+  version: manifest.version,
+  generatedAt: manifest.generatedAt,
+  month: manifest.month,
+  source: manifest.source,
+  positionCount: manifest.positionCount,
+  phaseCounts: manifest.phaseCounts,
+  positions: phaseFiles.flatMap((file) => file.positions),
+};
 
 describe('curated position dataset', () => {
-  it('matches its declared counts', () => {
+  it('matches its declared counts and split files', () => {
     expect(dataset.positions).toHaveLength(dataset.positionCount);
-    expect(dataset.positionCount).toBeGreaterThanOrEqual(2500);
+    expect(dataset.positionCount).toBeGreaterThanOrEqual(3500);
+    expect(manifest.positionCount).toBe(dataset.positions.length);
+
+    for (const file of phaseFiles) {
+      expect(file.positions).toHaveLength(file.positionCount);
+      expect(file.positions.every((position) => position.phase === file.phase)).toBe(true);
+      expect(file.positionCount).toBe(manifest.phaseCounts[file.phase]);
+    }
+
     const counted = dataset.positions.reduce<Record<string, number>>((acc, position) => {
       acc[position.phase] = (acc[position.phase] ?? 0) + 1;
       return acc;
@@ -21,7 +49,7 @@ describe('curated position dataset', () => {
   });
 
   it('contains enough middlegame decisions for the trainer', () => {
-    expect(dataset.phaseCounts.middlegame ?? 0).toBeGreaterThanOrEqual(10);
+    expect(dataset.phaseCounts.middlegame ?? 0).toBeGreaterThanOrEqual(1000);
   });
 
   it('applies the documented dataset filters', () => {
@@ -68,7 +96,7 @@ describe('curated position dataset', () => {
         }
       }
     }
-  }, 60_000);
+  }, 90_000);
 
   it('uses unique ids and FENs', () => {
     expect(new Set(dataset.positions.map((position) => position.id)).size).toBe(

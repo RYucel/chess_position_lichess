@@ -19,12 +19,12 @@ training:
   * best and second-best mover evaluations no more than 150 cp apart
 
 It reads parquet shards over HTTPS with DuckDB's httpfs extension, so the
-multi-gigabyte shards never have to be downloaded in full. The output matches
-public/data/curated_positions.json and the TypeScript PositionDataset type.
+multi-gigabyte shards never have to be downloaded in full. The output can be written as a monolithic JSON file for debugging or as the
+app's split phase files plus manifest.
 
 Examples:
-    python scripts/build_dataset.py --limit-per-phase 20
-    python scripts/build_dataset.py --out public/data/curated_positions.json
+    python scripts/build_dataset.py --limit-per-phase 20 --split-dir public/data
+    python scripts/build_dataset.py --limit-per-phase 20 --out /tmp/sample.json
     python scripts/build_dataset.py --local scripts/data/data_0000.parquet
     python scripts/build_dataset.py --shard-count 2 --scan-limit 600000
 
@@ -46,6 +46,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from dataset_io import write_split
+
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 DEFAULT_OUT = PROJECT_ROOT / "public" / "data" / "curated_positions.json"
@@ -63,7 +65,8 @@ PHASES = ("opening", "middlegame", "endgame")
 
 def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="output JSON path")
+    parser.add_argument("--out", type=Path, default=None, help="optional monolithic output JSON path")
+    parser.add_argument("--split-dir", type=Path, default=None, help="write phase files + manifest here")
     parser.add_argument("--limit-per-phase", type=int, default=20, help="maximum positions per phase")
     parser.add_argument("--min-depth", type=int, default=22, help="minimum Stockfish depth")
     parser.add_argument("--max-gap", type=int, default=150, help="maximum PV1-PV2 gap in cp")
@@ -346,18 +349,34 @@ def main(argv: Iterable[str] | None = None) -> int:
     for position in positions:
         phase_counts[position["phase"]] += 1
 
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     dataset = {
         "version": 1,
-        "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "generatedAt": generated_at,
         "source": "Lichess/chess-position-evaluations via DuckDB",
         "positionCount": len(positions),
         "phaseCounts": {phase: phase_counts.get(phase, 0) for phase in PHASES if phase_counts.get(phase)},
         "positions": positions,
     }
 
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(dataset, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Wrote {len(positions)} positions to {args.out}")
+    if args.out is None and args.split_dir is None:
+        args.out = DEFAULT_OUT
+
+    if args.out is not None:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(dataset, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"Wrote {len(positions)} positions to {args.out}")
+
+    if args.split_dir is not None:
+        manifest = write_split(
+            positions,
+            args.split_dir,
+            generated_at=generated_at,
+            source=dataset["source"],
+        )
+        print(f"Wrote {manifest['positionCount']} split positions to {args.split_dir}")
+        print("Split phase counts:", manifest["phaseCounts"])
+
     print("Phase counts:", dataset["phaseCounts"])
     if any(count < 3 for count in dataset["phaseCounts"].values()):
         print("Note: one phase has fewer than 3 positions; expose more shards or raise --scan-limit.")

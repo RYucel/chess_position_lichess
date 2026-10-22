@@ -5,6 +5,7 @@ import type { Move } from 'chess.js';
 import {
   AlertTriangle,
   ArrowLeftRight,
+  CalendarDays,
   Crosshair,
   Database,
   Dices,
@@ -461,6 +462,12 @@ export function TrainerShell() {
             <Database className="h-3 w-3 text-emerald-300" />
             {dataset ? `${dataset.positionCount} doğal pozisyon` : 'Veri yükleniyor'}
           </span>
+          {dataset?.month && (
+            <span className="chip border-white/[0.08]">
+              <CalendarDays className="h-3 w-3 text-violet-300" />
+              {dataset.month} seti
+            </span>
+          )}
           <span className="chip border-white/[0.08]">
             <Layers className="h-3 w-3 text-sky-300" />
             MultiPV 3–4

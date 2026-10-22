@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-22T05:22:27+00:00",
+  "month": "2026-10",
+  "source": "Lichess cloud evaluation + Lichess/chess-position-evaluations",
+  "positionCount": 3500,
+  "phaseCounts": {
+    "opening": 1167,
+    "middlegame": 1167,
+    "endgame": 1166
+  },
+  "files": {
+    "opening": "opening.json",
+    "middlegame": "middlegame.json",
+    "endgame": "endgame.json"
+  },
+  "refresh": {
+    "month": "2026-10",
+    "shardStart": 1,
+    "scanLimit": 800000,
+    "seed": 3500,
+    "total": 3500
+  }
+}

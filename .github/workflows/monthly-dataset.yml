@@ -1,0 +1,78 @@
+name: Monthly dataset refresh
+
+on:
+  schedule:
+    - cron: '15 3 1 * *'
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Dataset month (YYYY-MM); defaults to the current UTC month'
+        required: false
+        type: string
+      total:
+        description: 'Position count'
+        required: false
+        default: '3500'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monthly-dataset
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dataset dependencies
+        run: pip install duckdb chess
+
+      - name: Resolve month and target
+        env:
+          INPUT_MONTH: ${{ inputs.month }}
+          INPUT_TOTAL: ${{ inputs.total }}
+        run: |
+          if [ -n "$INPUT_MONTH" ]; then
+            MONTH="$INPUT_MONTH"
+          else
+            MONTH="$(date -u +%Y-%m)"
+          fi
+          TOTAL="${INPUT_TOTAL:-3500}"
+          echo "MONTH=$MONTH" >> "$GITHUB_ENV"
+          echo "TOTAL=$TOTAL" >> "$GITHUB_ENV"
+
+      - name: Build split dataset
+        run: python scripts/refresh_dataset.py --month "$MONTH" --total "$TOTAL"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+
+      - name: Commit refreshed dataset
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data
+          if git diff --cached --quiet; then
+            echo "Dataset unchanged; nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore: refresh position dataset for $MONTH"
+          git push
