@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-22T05:54:39+00:00",
-  "month": "2026-10",
-  "source": "Lichess/chess-position-evaluations via DuckDB (shards 1 + 2)",
+  "generatedAt": "2026-11-01T10:27:52+00:00",
+  "month": "2026-11",
+  "source": "Lichess/chess-position-evaluations via DuckDB",
   "positionCount": 5000,
   "phaseCounts": {
     "opening": 1667,
@@ -15,10 +15,10 @@
     "endgame": "endgame.json"
   },
   "refresh": {
-    "month": "2026-10",
-    "shardStart": 2,
+    "month": "2026-11",
+    "shardStart": 3,
     "scanLimit": 1000000,
-    "seed": 5000,
+    "seed": 20266100,
     "total": 5000
   }
 }
